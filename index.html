@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自販機管理ツール - mog-mog farm</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif; background: #f5f4f0; color: #1a1a1a; font-size: 16px; }
+.app-title { font-size: 17px; font-weight: 500; padding: 0.75rem 1rem; text-align: center; background: #fff; border-bottom: 0.5px solid #ddd; position: sticky; top: 0; z-index: 10; }
+.save-status { font-size: 11px; color: #aaa; display: block; margin-top: 2px; }
+.save-status.saved { color: #3B6D11; }
+h3 { font-size: 13px; font-weight: 500; color: #666; margin: 0 0 0.75rem; letter-spacing: 0.03em; }
+.card { background: #fff; border: 0.5px solid #e0dfd8; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: #666; }
+.field input { font-size: 16px; padding: 10px 12px; border: 0.5px solid #ccc; border-radius: 8px; background: #f9f8f5; color: #1a1a1a; width: 100%; -webkit-appearance: none; }
+.field input:focus { outline: none; border-color: #888; box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
+.product-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.product-card { background: #f9f8f5; border: 0.5px solid #e0dfd8; border-radius: 8px; padding: 10px 12px; }
+.product-card.removal { border-color: #F09595; background: #fff5f5; }
+.product-label { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 8px; }
+.product-card .field label { font-size: 12px; }
+.product-card .field input { font-size: 15px; padding: 8px 10px; }
+.price-display { font-size: 12px; color: #888; margin-top: 6px; text-align: right; }
+.price-display span { font-weight: 500; color: #1a1a1a; font-size: 13px; }
+.summary { background: #f9f8f5; border-radius: 8px; padding: 14px 16px; margin-top: 12px; }
+.summary-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 14px; color: #666; border-bottom: 0.5px solid #e8e7e2; }
+.summary-row:last-child { border-bottom: none; font-size: 16px; font-weight: 500; color: #1a1a1a; padding-top: 10px; margin-top: 4px; }
+.summary-row span:last-child { color: #1a1a1a; }
+.btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 500; border-radius: 8px; border: 0.5px solid #ccc; background: #fff; color: #1a1a1a; cursor: pointer; margin-top: 0.75rem; }
+.btn:active { transform: scale(0.98); background: #f5f4f0; }
+.btn-primary { background: #1a1a1a; color: #fff; border-color: transparent; }
+.btn-primary:active { opacity: 0.85; }
+.btn-danger { border-color: #E24B4A; color: #A32D2D; }
+.btn-danger:active { background: #fff5f5; }
+.btn-warning { border-color: #BA7517; color: #854F0B; background: #fff; }
+.btn-warning:active { background: #FAEEDA; }
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.history-table th { text-align: left; padding: 6px 4px; color: #888; font-weight: 400; border-bottom: 0.5px solid #ccc; white-space: nowrap; }
+.history-table td { padding: 7px 4px; border-bottom: 0.5px solid #eee; color: #1a1a1a; white-space: nowrap; }
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tr.removal-row td { color: #A32D2D; }
+.empty-msg { text-align: center; color: #aaa; font-size: 14px; padding: 2rem 0; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #e8f0fb; color: #185FA5; margin-left: 6px; }
+.badge-danger { background: #fff5f5; color: #A32D2D; }
+.price-edit-row { display: flex; align-items: center; gap: 8px; }
+.price-edit-row input { width: 90px; text-align: right; }
+.tab-bar { display: flex; gap: 4px; margin: 1rem; }
+.tab { flex: 1; padding: 10px 4px; font-size: 13px; border: 0.5px solid #ccc; border-radius: 8px; background: #f5f4f0; color: #666; cursor: pointer; text-align: center; }
+.tab.active { background: #1a1a1a; color: #fff; border-color: transparent; }
+.section { display: none; padding: 0 1rem 2rem; }
+.section.active { display: block; }
+.notice { font-size: 13px; color: #666; background: #fff5f5; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; border-left: 3px solid #E24B4A; }
+.monthly-card { background: #f9f8f5; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+.monthly-title { font-size: 15px; font-weight: 500; color: #1a1a1a; margin-bottom: 8px; }
+.monthly-row { display: flex; justify-content: space-between; font-size: 13px; color: #666; padding: 3px 0; }
+.monthly-row span:last-child { color: #1a1a1a; font-weight: 500; }
+.monthly-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; color: #1a1a1a; border-top: 0.5px solid #ccc; margin-top: 8px; padding-top: 8px; }
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.type-btn { padding: 12px; font-size: 14px; border-radius: 8px; border: 0.5px solid #ccc; background: #f9f8f5; color: #666; cursor: pointer; text-align: center; }
+.type-btn.add.selected { border: 2px solid #185FA5; color: #185FA5; background: #e8f0fb; }
+.type-btn.remove.selected { border: 2px solid #E24B4A; color: #A32D2D; background: #fff5f5; }
+.save-msg { display: none; text-align: center; font-size: 13px; color: #3B6D11; margin-top: 10px; }
+.data-info { font-size: 12px; color: #bbb; text-align: center; margin-top: 10px; }
+@media (max-width: 400px) {
+  .product-label { font-size: 12px; }
+  .tab { font-size: 12px; padding: 8px 2px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-title">
+  🍓 自販機管理ツール
+  <span class="save-status" id="save-status">読み込み中...</span>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('input',this)">補充入力</div>
+  <div class="tab" onclick="switchTab('prices',this)">単価設定</div>
+  <div class="tab" onclick="switchTab('history',this)">履歴</div>
+  <div class="tab" onclick="switchTab('monthly',this)">月別集計</div>
+</div>
+
+<!-- 補充入力タブ -->
+<div class="section active" id="tab-input">
+  <div class="card">
+    <h3>操作の種類</h3>
+    <div class="type-toggle">
+      <div class="type-btn add selected" id="btn-add" onclick="setType('add')">＋ 補充する</div>
+      <div class="type-btn remove" id="btn-remove" onclick="setType('remove')">－ 取り出す</div>
+    </div>
+    <div id="removal-notice" class="notice" style="display:none;">取り出し入力中です。入力した個数分だけ販売額がマイナスになります。</div>
+  </div>
+
+  <div class="card">
+    <h3>日付</h3>
+    <div class="field">
+      <label>補充日</label>
+      <input type="date" id="date" />
+    </div>
+    <div style="font-size:12px;color:#aaa;margin-top:8px;">時刻は「記録する」ボタンを押した時刻が自動で登録されます</div>
+  </div>
+
+  <div class="card">
+    <h3 id="qty-label">補充数</h3>
+    <div class="product-grid">
+      <div class="product-card" id="pc-s">
+        <div class="product-label">小</div>
+        <div class="field">
+          <label>個数</label>
+          <input type="number" id="qty-s" placeholder="0" oninput="calcAll()" inputmode="numeric" min="0" />
+        </div>
+        <div class="price-display">単価 <span id="price-s-disp">500</span>円</div>
+        <div class="price-display">金額 <span id="sales-s">0</span>円</div>
+      </div>
+      <div class="product-card" id="pc-m">
+        <div class="product-label">中</div>
+        <div class="field">
+          <label>個数</label>
+          <input type="number" id="qty-m" placeholder="0" oninput="calcAll()" inputmode="numeric" min="0" />
+        </div>
+        <div class="price-display">単価 <span id="price-m-disp">650</span>円</div>
+        <div class="price-display">金額 <span id="sales-m">0</span>円</div>
+      </div>
+      <div class="product-card" id="pc-d">
+        <div class="product-label">ドライ</div>
+        <div class="field">
+          <label>個数</label>
+          <input type="number" id="qty-d" placeholder="0" oninput="calcAll()" inputmode="numeric" min="0" />
+        </div>
+        <div class="price-display">単価 <span id="price-d-disp">450</span>円</div>
+        <div class="price-display">金額 <span id="sales-d">0</span>円</div>
+      </div>
+    </div>
+    <div class="summary">
+      <div class="summary-row"><span>小　金額</span><span id="sum-s">0 円</span></div>
+      <div class="summary-row"><span>中　金額</span><span id="sum-m">0 円</span></div>
+      <div class="summary-row"><span>ドライ金額</span><span id="sum-d">0 円</span></div>
+      <div class="summary-row"><span id="total-label">日別販売額合計</span><span id="sum-total">0 円</span></div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="submit-btn" onclick="addRecord()">この内容で記録する</button>
+  <button class="btn" onclick="clearForm()">入力をクリア</button>
+</div>
+
+<!-- 単価設定タブ -->
+<div class="section" id="tab-prices">
+  <div class="card">
+    <h3>単価の変更</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field">
+        <label>小（現在: <span id="cur-s">500</span>円）</label>
+        <div class="price-edit-row">
+          <input type="number" id="edit-s" value="500" inputmode="numeric" />
+          <span style="font-size:13px;color:#888;">円</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>中（現在: <span id="cur-m">650</span>円）</label>
+        <div class="price-edit-row">
+          <input type="number" id="edit-m" value="650" inputmode="numeric" />
+          <span style="font-size:13px;color:#888;">円</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>ドライ（現在: <span id="cur-d">450</span>円）</label>
+        <div class="price-edit-row">
+          <input type="number" id="edit-d" value="450" inputmode="numeric" />
+          <span style="font-size:13px;color:#888;">円</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:1rem;" onclick="savePrices()">単価を更新する</button>
+    <div id="price-saved" class="save-msg">✓ 単価を更新しました</div>
+  </div>
+</div>
+
+<!-- 履歴タブ -->
+<div class="section" id="tab-history">
+  <div class="card">
+    <h3>入力済み一覧 <span class="badge" id="record-count">0件</span></h3>
+    <div id="history-body">
+      <div class="empty-msg">まだ記録がありません</div>
+    </div>
+  </div>
+  <button class="btn" onclick="copyAll()">全データをコピー（Excel貼り付け用）</button>
+  <button class="btn btn-warning" style="margin-top:0.5rem;" onclick="clearAllData()">全データを削除する</button>
+  <div class="data-info" id="data-info"></div>
+</div>
+
+<!-- 月別集計タブ -->
+<div class="section" id="tab-monthly">
+  <div id="monthly-body">
+    <div class="empty-msg">まだ記録がありません</div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'jihan_records_v1';
+const PRICES_KEY  = 'jihan_prices_v1';
+let prices = { s:500, m:650, d:450 };
+let records = [];
+let currentType = 'add';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    localStorage.setItem(PRICES_KEY,  JSON.stringify(prices));
+    const d = new Date();
+    const ts = d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0')
+             + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    const el = document.getElementById('save-status');
+    el.textContent = '自動保存済み: ' + ts;
+    el.className = 'save-status saved';
+    updateDataInfo();
+  } catch(e) {
+    document.getElementById('save-status').textContent = '⚠ 保存エラー';
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    const p = localStorage.getItem(PRICES_KEY);
+    if (r) records = JSON.parse(r);
+    if (p) {
+      prices = JSON.parse(p);
+      ['s','m','d'].forEach(k => {
+        document.getElementById('price-'+k+'-disp').textContent = prices[k];
+        document.getElementById('cur-'+k).textContent = prices[k];
+        document.getElementById('edit-'+k).value = prices[k];
+      });
+    }
+    const el = document.getElementById('save-status');
+    if (records.length > 0) {
+      el.textContent = records.length + '件のデータを読み込みました';
+      el.className = 'save-status saved';
+    } else {
+      el.textContent = '保存データなし（新規）';
+      el.className = 'save-status';
+    }
+    renderHistory();
+    renderMonthly();
+    updateDataInfo();
+  } catch(e) {
+    document.getElementById('save-status').textContent = '読み込みエラー';
+  }
+}
+
+function updateDataInfo() {
+  const el = document.getElementById('data-info');
+  if (el) el.textContent = records.length + '件保存中 ／ 同じブラウザ・同じファイルで開いた時のみデータが残ります';
+}
+
+function today() {
+  return new Date().toISOString().slice(0,10);
+}
+function nowTime() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+document.getElementById('date').value = today();
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+function switchTabDirect(name) {
+  const names = ['input','prices','history','monthly'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function setType(type) {
+  currentType = type;
+  const rem = type === 'remove';
+  document.getElementById('btn-add').classList.toggle('selected', !rem);
+  document.getElementById('btn-remove').classList.toggle('selected', rem);
+  document.getElementById('removal-notice').style.display = rem ? 'block' : 'none';
+  document.getElementById('qty-label').textContent = rem ? '取り出し数' : '補充数';
+  document.getElementById('total-label').textContent = rem ? '取り出し合計（マイナス）' : '日別販売額合計';
+  document.getElementById('submit-btn').textContent = rem ? 'この内容で取り出し記録する' : 'この内容で記録する';
+  document.getElementById('submit-btn').className = rem ? 'btn btn-danger' : 'btn btn-primary';
+  ['s','m','d'].forEach(k => document.getElementById('pc-'+k).classList.toggle('removal', rem));
+  calcAll();
+}
+
+function calcAll() {
+  const sign = currentType === 'remove' ? -1 : 1;
+  const qs = parseInt(document.getElementById('qty-s').value) || 0;
+  const qm = parseInt(document.getElementById('qty-m').value) || 0;
+  const qd = parseInt(document.getElementById('qty-d').value) || 0;
+  const ss = sign * qs * prices.s, sm = sign * qm * prices.m, sd = sign * qd * prices.d;
+  document.getElementById('sales-s').textContent = ss.toLocaleString();
+  document.getElementById('sales-m').textContent = sm.toLocaleString();
+  document.getElementById('sales-d').textContent = sd.toLocaleString();
+  document.getElementById('sum-s').textContent = ss.toLocaleString() + ' 円';
+  document.getElementById('sum-m').textContent = sm.toLocaleString() + ' 円';
+  document.getElementById('sum-d').textContent = sd.toLocaleString() + ' 円';
+  document.getElementById('sum-total').textContent = (ss+sm+sd).toLocaleString() + ' 円';
+}
+
+function clearForm() {
+  ['qty-s','qty-m','qty-d'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('date').value = today();
+  calcAll();
+}
+
+function addRecord() {
+  const date = document.getElementById('date').value;
+  if (!date) { alert('日付を入力してください'); return; }
+  const d = new Date();
+  const time = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  const qs = parseInt(document.getElementById('qty-s').value) || 0;
+  const qm = parseInt(document.getElementById('qty-m').value) || 0;
+  const qd = parseInt(document.getElementById('qty-d').value) || 0;
+  if (qs===0 && qm===0 && qd===0) { alert('個数を1つ以上入力してください'); return; }
+  const sign = currentType === 'remove' ? -1 : 1;
+  const ss = sign*qs*prices.s, sm = sign*qm*prices.m, sd = sign*qd*prices.d;
+  records.push({ date, time, type: currentType, qs: sign*qs, qm: sign*qm, qd: sign*qd, ps: prices.s, pm: prices.m, pd: prices.d, ss, sm, sd, total: ss+sm+sd });
+  saveToStorage();
+  renderHistory();
+  renderMonthly();
+  clearForm();
+  setType('add');
+  switchTabDirect('history');
+}
+
+function renderHistory() {
+  const body = document.getElementById('history-body');
+  document.getElementById('record-count').textContent = records.length + '件';
+  if (records.length === 0) { body.innerHTML = '<div class="empty-msg">まだ記録がありません</div>'; return; }
+  let html = '<div style="overflow-x:auto;"><table class="history-table"><thead><tr><th>日付</th><th>時刻</th><th>種別</th><th>小</th><th>中</th><th>ドライ</th><th style="text-align:right;">合計</th></tr></thead><tbody>';
+  [...records].reverse().forEach(r => {
+    const rem = r.type === 'remove';
+    html += `<tr class="${rem?'removal-row':''}"><td>${r.date}</td><td>${r.time}</td><td><span class="badge ${rem?'badge-danger':''}">${rem?'取出':'補充'}</span></td><td>${r.qs!==0?Math.abs(r.qs)+'個':'−'}</td><td>${r.qm!==0?Math.abs(r.qm)+'個':'−'}</td><td>${r.qd!==0?Math.abs(r.qd)+'個':'−'}</td><td style="text-align:right;font-weight:500;">${r.total.toLocaleString()}円</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+}
+
+function renderMonthly() {
+  const body = document.getElementById('monthly-body');
+  if (records.length === 0) { body.innerHTML = '<div class="empty-msg" style="text-align:center;color:#aaa;font-size:14px;padding:2rem 0;">まだ記録がありません</div>'; return; }
+  const months = {};
+  records.forEach(r => {
+    const ym = r.date.slice(0,7);
+    if (!months[ym]) months[ym] = { ss:0, sm:0, sd:0, total:0, add:0, remove:0 };
+    months[ym].ss+=r.ss; months[ym].sm+=r.sm; months[ym].sd+=r.sd; months[ym].total+=r.total;
+    months[ym][r.type]++;
+  });
+  let html = '';
+  Object.keys(months).sort().reverse().forEach(ym => {
+    const m = months[ym], [y,mo] = ym.split('-');
+    html += `<div class="monthly-card"><div class="monthly-title">${y}年 ${parseInt(mo)}月</div><div class="monthly-row"><span>補充 ${m.add}回 / 取出 ${m.remove}回</span><span></span></div><div class="monthly-row"><span>小　販売額</span><span>${m.ss.toLocaleString()} 円</span></div><div class="monthly-row"><span>中　販売額</span><span>${m.sm.toLocaleString()} 円</span></div><div class="monthly-row"><span>ドライ販売額</span><span>${m.sd.toLocaleString()} 円</span></div><div class="monthly-total"><span>月間合計</span><span>${m.total.toLocaleString()} 円</span></div></div>`;
+  });
+  body.innerHTML = html;
+}
+
+function savePrices() {
+  const ns = parseInt(document.getElementById('edit-s').value);
+  const nm = parseInt(document.getElementById('edit-m').value);
+  const nd = parseInt(document.getElementById('edit-d').value);
+  if (!ns||!nm||!nd||ns<=0||nm<=0||nd<=0) { alert('単価は1円以上の数値を入力してください'); return; }
+  prices = { s:ns, m:nm, d:nd };
+  ['s','m','d'].forEach(k => { document.getElementById('cur-'+k).textContent = prices[k]; document.getElementById('price-'+k+'-disp').textContent = prices[k]; });
+  saveToStorage(); calcAll();
+  const msg = document.getElementById('price-saved');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display='none', 2000);
+}
+
+function copyAll() {
+  if (records.length===0) { alert('記録がありません'); return; }
+  let text = '日付\t時刻\t種別\t小\t単価(小)\t中\t単価(中)\tドライ\t単価(ドライ)\t販売額(小)\t販売額(中)\t販売額(ドライ)\t日別販売額\n';
+  records.forEach(r => { text += `${r.date}\t${r.time}\t${r.type==='remove'?'取出':'補充'}\t${r.qs||''}\t${r.ps}\t${r.qm||''}\t${r.pm}\t${r.qd||''}\t${r.pd}\t${r.ss}\t${r.sm}\t${r.sd}\t${r.total}\n`; });
+  navigator.clipboard.writeText(text).then(() => alert('コピーしました！Excelに貼り付けできます')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    alert('コピーしました！Excelに貼り付けできます');
+  });
+}
+
+function clearAllData() {
+  if (!confirm('全データを削除しますか？\nこの操作は元に戻せません。')) return;
+  if (!confirm('本当に削除しますか？\n先にExcelへコピーしておくことをおすすめします。')) return;
+  records = [];
+  localStorage.removeItem(STORAGE_KEY);
+  renderHistory(); renderMonthly();
+  const el = document.getElementById('save-status');
+  el.textContent = 'データを削除しました'; el.className = 'save-status';
+  updateDataInfo();
+}
+
+loadFromStorage();
+</script>
+</body>
+</html>
